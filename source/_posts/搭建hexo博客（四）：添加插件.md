@@ -9,6 +9,8 @@ tags:
 
 > 在完整的搭建了hexo博客之后，基本功能都可以使用，这时可以添加一些自定义的插件，丰富自己的博客
 
+
+
 ### 主题 - next
 
 1. 下载主题
@@ -145,4 +147,26 @@ tags:
    ---
    ```
 
+2. 现象：文章侧边栏目录点击无效（包含中文的目录）
+
+   报错：
+
+   ```javascript
+   utils.js:240 Uncaught TypeError: Cannot read property 'getBoundingClientRect' of null
+       at HTMLAnchorElement.<anonymous> (utils.js:240)
+   ```
+
+   解决：目前有提到这个issue，有提到 `7.9.0` 版本解决
+
+   ```http
+   https://github.com/theme-next/hexo-theme-next/issues/1537
+   ```
+
+   看到当时的报错是`utils.js`，可以直接从github上拉取最新的`utils.js` 即可解决
+
+   ```http
+   https://github.com/theme-next/hexo-theme-next/blob/master/source/js/utils.js
+   ```
+
    
+
