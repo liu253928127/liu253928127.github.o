@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"valine","storage":true,"lazyload":false,"nav":null,"activeClass":"valine"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="keystore 和 truststore是 JSSE 中使用的两种文件。这两种文件都使用 java 的 keytool 来管理，他们的不同主要在于用途和相应用途决定的内容的不同。  keystore 和 truststore这两种文件在一个SSL认证场景中，keystore 用于服务器认证客户端，而 truststore 用于客户端认证服务器。 比如在客户端（服务请求方）对服务器（服务提供方）">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ssl双向认证（四）：HttpClient实现双向认证">
+<meta property="og:url" content="http://example.com/2018/12/09/ssl%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81%EF%BC%88%E5%9B%9B%EF%BC%89%EF%BC%9AHttpClient%E5%AE%9E%E7%8E%B0%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81/index.html">
+<meta property="og:site_name" content="coofive">
+<meta property="og:description" content="keystore 和 truststore是 JSSE 中使用的两种文件。这两种文件都使用 java 的 keytool 来管理，他们的不同主要在于用途和相应用途决定的内容的不同。  keystore 和 truststore这两种文件在一个SSL认证场景中，keystore 用于服务器认证客户端，而 truststore 用于客户端认证服务器。 比如在客户端（服务请求方）对服务器（服务提供方）">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2018-12-09T04:03:35.000Z">
+<meta property="article:modified_time" content="2020-12-19T14:10:58.331Z">
+<meta property="article:author" content="coofive">
+<meta property="article:tag" content="httpclient">
+<meta property="article:tag" content="ssl">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2018/12/09/ssl%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81%EF%BC%88%E5%9B%9B%EF%BC%89%EF%BC%9AHttpClient%E5%AE%9E%E7%8E%B0%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>ssl双向认证（四）：HttpClient实现双向认证 | coofive</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">coofive</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2018/12/09/ssl%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81%EF%BC%88%E5%9B%9B%EF%BC%89%EF%BC%9AHttpClient%E5%AE%9E%E7%8E%B0%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="coofive">
+      <meta itemprop="description" content="Everything will be OK!">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="coofive">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ssl双向认证（四）：HttpClient实现双向认证
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2018-12-09 12:03:35" itemprop="dateCreated datePublished" datetime="2018-12-09T12:03:35+08:00">2018-12-09</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-12-19 22:10:58" itemprop="dateModified" datetime="2020-12-19T22:10:58+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%BD%91%E7%BB%9C/" itemprop="url" rel="index"><span itemprop="name">网络</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%BD%91%E7%BB%9C/java/" itemprop="url" rel="index"><span itemprop="name">java</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2018/12/09/ssl%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81%EF%BC%88%E5%9B%9B%EF%BC%89%EF%BC%9AHttpClient%E5%AE%9E%E7%8E%B0%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81/" class="post-meta-item leancloud_visitors" data-flag-title="ssl双向认证（四）：HttpClient实现双向认证" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2018/12/09/ssl%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81%EF%BC%88%E5%9B%9B%EF%BC%89%EF%BC%9AHttpClient%E5%AE%9E%E7%8E%B0%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2018/12/09/ssl%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81%EF%BC%88%E5%9B%9B%EF%BC%89%EF%BC%9AHttpClient%E5%AE%9E%E7%8E%B0%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p><code>keystore</code> 和 <code>truststore</code>是 <code>JSSE</code> 中使用的两种文件。这两种文件都使用 <code>java</code> 的 <code>keytool</code> 来管理，他们的不同主要在于用途和相应用途决定的内容的不同。</p>
+</blockquote>
+<h4><span id="keystore-和-truststore"><code>keystore</code> 和 <code>truststore</code></span></h4><p>这两种文件在一个SSL认证场景中，<code>keystore</code> 用于服务器认证客户端，而 <code>truststore</code> 用于客户端认证服务器。</p>
+<p>比如在客户端（服务请求方）对服务器（服务提供方）发起一次 <code>HTTPS</code> 请求时，服务器需要向客户端提供认证以便客户端确认这个服务器是否可信。 这里，服务器向客户端提供的认证信息就是自身的证书和公钥，而这些信息，包括对应的私钥，服务器就是通过 <code>keystore</code> 来保存的。 当服务器提供的证书和公钥到了客户端，客户端就要生成一 个 <code>truststore</code> 文件保存这些来自服务器证书和公钥。</p>
+<p>因为 <code>keystore</code> 文件既可以存储敏感信息，比如密码和私钥，也可以存储公开信息比如公钥，证书之类，所有实际上来讲，可以将 <code>keystore</code> 文件同样用做 <code>truststore</code> 文件。</p>
+<h4><span id="httpclient-实现双向认证"><code>httpclient</code> 实现双向认证</span></h4><p>由于公司给了密钥以及证书，所以直接可以用 <code>keytool</code>生成 <code>keystore</code>，由于服务器和客户端用的是一套证书，所以，生成的<code>keystore</code>既可以用来做<code>keystore</code>，也能做 <code>truststore</code>，从而实现双向认证的证书互相认证。上一篇介绍了如何生成 <code>jks</code> 文件，这里就不细说了，直接拿过来用。</p>
+<p>maven import</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.httpcomponents<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>httpclient<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>4.5.5<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.commons<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>commons-lang3<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.4<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>设置证书的方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">    * 设置证书</span></span><br><span class="line"><span class="comment">    *</span></span><br><span class="line"><span class="comment">    * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">    * <span class="doctag">@throws</span> Exception</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> SSLConnectionSocketFactory <span class="title">getSslConnectionSocketFactory</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    String client_key_pass = <span class="string">&quot;changeit&quot;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// keystore</span></span><br><span class="line">    KeyStore clientKeyStore = KeyStore.getInstance(<span class="string">&quot;JKS&quot;</span>);</span><br><span class="line">    InputStream clientKeyStoreInput = <span class="keyword">new</span> FileInputStream(<span class="keyword">new</span> File(<span class="string">&quot;C:/test/keystore.jks&quot;</span>));</span><br><span class="line">    clientKeyStore.load(clientKeyStoreInput, client_key_pass.toCharArray());</span><br><span class="line"></span><br><span class="line">    SSLContext sslContext = SSLContexts.custom()</span><br><span class="line">            .loadTrustMaterial(clientKeyStore, <span class="keyword">new</span> TrustSelfSignedStrategy())   <span class="comment">// 设置truststore</span></span><br><span class="line">            .loadKeyMaterial(clientKeyStore, client_key_pass.toCharArray())     <span class="comment">// 设置keystore</span></span><br><span class="line">            .setSecureRandom(<span class="keyword">new</span> SecureRandom())</span><br><span class="line">            .build();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Allow TLSv1 protocol only</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> SSLConnectionSocketFactory(</span><br><span class="line">            sslContext,</span><br><span class="line">            <span class="keyword">new</span> String[]&#123;<span class="string">&quot;TLSv1.2&quot;</span>&#125;,</span><br><span class="line">            <span class="keyword">null</span>,</span><br><span class="line">            SSLConnectionSocketFactory.BROWSER_COMPATIBLE_HOSTNAME_VERIFIER);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>实例化httpclient</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 实例化httpClient</span></span><br><span class="line">httpClient = HttpClients.custom()</span><br><span class="line">        .setSSLSocketFactory(getSslConnectionSocketFactory())   <span class="comment">// 设置SSLSocket</span></span><br><span class="line">        .build();</span><br></pre></td></tr></table></figure>
+<p>通过以上的 <code>httpclient</code> 配置，即可实现 <code>httpclient</code>双向认证。</p>
+<p>在访问有些 HTTPS 站点时，你还可能会遇到下面的异常：</p>
+<blockquote>
+<p>javax.net.ssl.SSLHandshakeException:</p>
+</blockquote>
+<blockquote>
+<p>sun.security.validator.ValidatorException: PKIX path building failed:</p>
+</blockquote>
+<blockquote>
+<p>sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target</p>
+</blockquote>
+<blockquote>
+<p>In order to use the self-signed client certificate which was issued by a non public CA the public server certificate must be imported into a truststore.</p>
+</blockquote>
+<p>在之前有介绍道关于 <code>SSL</code>、<code>HTTPS</code> 的相关联性。我碰到的这个异常是因为只设置了 <code>keystore</code> 而没有设置 <code>truststore</code>。</p>
+<p>之前在网上查到的资料是通过设置系统环境变量，将其添加到 <code>truststore</code>。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">System.setProperty(&quot;javax.net.ssl.trustStore&quot;, &quot;path&#x2F;to&#x2F;truststore.jks&quot;);</span><br><span class="line">System.setProperty(&quot;javax.net.ssl.trustStorePassword&quot;, &quot;changeit&quot;);</span><br><span class="line">System.setProperty(&quot;javax.net.ssl.trustStoreType&quot;, &quot;JKS&quot;);</span><br></pre></td></tr></table></figure>
+<p>然后发现并不管用，于是直接在初始化 <code>httpclient</code> 的时候将 <code>keystore</code>、<code>truststore</code> 设置进去：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">SSLContext sslContext = SSLContexts.custom()</span><br><span class="line">            .loadTrustMaterial(clientKeyStore, <span class="keyword">new</span> TrustSelfSignedStrategy())   <span class="comment">// 设置truststore</span></span><br><span class="line">            .loadKeyMaterial(clientKeyStore, client_key_pass.toCharArray())     <span class="comment">// 设置keystore</span></span><br><span class="line">            .setSecureRandom(<span class="keyword">new</span> SecureRandom())</span><br><span class="line">            .build();</span><br></pre></td></tr></table></figure>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/httpclient/" rel="tag"># httpclient</a>
+              <a href="/tags/ssl/" rel="tag"># ssl</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/12/04/ssl%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81%EF%BC%88%E4%B8%89%EF%BC%89%EF%BC%9A%E5%8D%95%E5%90%91%E8%AE%A4%E8%AF%81%E5%92%8C%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81/" rel="prev" title="ssl双向认证（三）：单向认证和双向认证">
+      <i class="fa fa-chevron-left"></i> ssl双向认证（三）：单向认证和双向认证
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2019/01/20/Linux%E5%AD%A6%E4%B9%A0%EF%BC%88%E4%B8%80%EF%BC%89%EF%BC%9ACentOS-6-8%E5%AE%89%E8%A3%85%E4%B8%8E%E9%85%8D%E7%BD%AE/" rel="next" title="Linux学习（一）：CentOS-6.8安装与配置">
+      Linux学习（一）：CentOS-6.8安装与配置 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link"><span class="nav-text">keystore 和 truststore</span></a></li><li class="nav-item nav-level-4"><a class="nav-link"><span class="nav-text">httpclient 实现双向认证</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="coofive"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">coofive</p>
+  <div class="site-description" itemprop="description">Everything will be OK!</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">9</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">coofive</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : true,
+      appId      : 'xp4HJfSVXUlCGNzPpDeLTjjU-gzGzoHsz',
+      appKey     : 'ntYnjYy0CE17kyFPfhXTss7M',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : true,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>
