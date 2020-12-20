@@ -240,14 +240,14 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2><span id="证书">证书</span></h2><blockquote>
+        <h2 id="证书"><a href="#证书" class="headerlink" title="证书"></a>证书</h2><blockquote>
 <p>数字证书（或简称证书）是在 <code>Internet</code> 上唯一地标识人员和资源的电子文件。证书使两个实体之间能够进行安全、保密的通信。证书有很多种类型，例如个人证书（由个人使用）和服务器证书（用于通过安全套接字层  <code>SSL</code>  技术在服务器和客户机之间建立安全会话）。</p>
 </blockquote>
-<h3><span id="证书介绍">证书介绍</span></h3><h4><span id="ssl-简介"><code>SSL</code> 简介</span></h4><p><strong><code>wiki</code></strong> : <strong>传输层安全性协议</strong>（<code>Transport Layer Security</code>，简称 <code>TLS</code>），前身<strong>安全套接层</strong>（<code>Secure Sockets Layer</code>，简称 <code>SSL</code>），是一种安全协议，目的是为互联网通信提供安全及数据完整性保障。</p>
+<h3 id="证书介绍"><a href="#证书介绍" class="headerlink" title="证书介绍"></a>证书介绍</h3><h4 id="SSL-简介"><a href="#SSL-简介" class="headerlink" title="SSL 简介"></a><code>SSL</code> 简介</h4><p><strong><code>wiki</code></strong> : <strong>传输层安全性协议</strong>（<code>Transport Layer Security</code>，简称 <code>TLS</code>），前身<strong>安全套接层</strong>（<code>Secure Sockets Layer</code>，简称 <code>SSL</code>），是一种安全协议，目的是为互联网通信提供安全及数据完整性保障。</p>
 <p><strong><code>Https</code></strong> : <strong>超文本传输安全协议</strong>（<code>Hypertext Transfer Protocol Secure</code>，简称 <code>HTTPS</code>，常称为<code>HTTP over TLS</code>，<code>HTTP over SSL</code>），是一种透过计算机网络进行安全通信的传输协议。<code>HTTPS</code> 经由 <code>HTTP</code> 进行通信，但利用 <code>SSL/TLS</code> 来加密数据包。<code>HTTPS</code> 开发的主要目的，是提供对网站服务器的身份认证，保护交换数据的隐私与完整性。简而言之，<code>HTTPS</code> 就是带加密的 <code>HTTP</code> 协议。</p>
 <p><strong><code>OpenSSL</code></strong> : 一个开放源代码的软件库包，应用程序可以使用这个包来进行安全通信，避免窃听，同时确认另一端连线者的身份。其主要库是 <code>C语言</code> 所写成，实现了基本的加密功能，实现了 <code>SSL/TLS</code> 协议。也就是说 <code>OpenSSL</code> 是 <code>SSL/TLS</code> 的一种实现。</p>
-<h4><span id="证书标准">证书标准</span></h4><p><strong><code>X.509</code></strong> : 它是密码学里公钥证书的格式标准。<code>X.509</code> 证书里含有<strong>公钥</strong>、<strong>身份信息</strong>（比如网络主机名，组织的名称或个体名称等）和<strong>签名信息</strong>（可以是证书签发机构CA的签名，也可以是自签名）。</p>
-<h4><span id="证书文件扩展名">证书文件扩展名</span></h4><p><code>X.509</code> 有多种常用的扩展名。不过其中的一些还用于其它用途，就是说具有这个扩展名的文件可能并不是证书，比如说可能只是保存了私钥。</p>
+<h4 id="证书标准"><a href="#证书标准" class="headerlink" title="证书标准"></a>证书标准</h4><p><strong><code>X.509</code></strong> : 它是密码学里公钥证书的格式标准。<code>X.509</code> 证书里含有<strong>公钥</strong>、<strong>身份信息</strong>（比如网络主机名，组织的名称或个体名称等）和<strong>签名信息</strong>（可以是证书签发机构CA的签名，也可以是自签名）。</p>
+<h4 id="证书文件扩展名"><a href="#证书文件扩展名" class="headerlink" title="证书文件扩展名"></a>证书文件扩展名</h4><p><code>X.509</code> 有多种常用的扩展名。不过其中的一些还用于其它用途，就是说具有这个扩展名的文件可能并不是证书，比如说可能只是保存了私钥。</p>
 <ul>
 <li><p><strong><code>.pem</code></strong> :   <code> Privacy Enhanced Mai</code> ，<code>DER</code> 编码的证书再进行 <code>BASE64</code> 编码的数据存放在 <code>----BEGIN CERTIFICATE---- </code>和 <code>----END CERTIFICATE----</code>之中。</p>
 <p>查看 <code>pem</code> 格式证书信息：</p>
@@ -267,7 +267,7 @@
 </li>
 </ul>
 <p>上面只是对自己常用的证书后缀的一个简单解释，具体可参照 <code>维基百科</code>。</p>
-<h4><span id="证书转换">证书转换</span></h4><blockquote>
+<h4 id="证书转换"><a href="#证书转换" class="headerlink" title="证书转换"></a>证书转换</h4><blockquote>
 <p>Java自带的 <code>keytool</code> 工具是个密钥和证书管理工具。它使用户能够管理自己的公钥/私钥对及相关证书，用于（通过数字签名）自我认证（用户向别的用户/服务认证自己）或数据完整性以及认证服务。它还允许用户储存他们的通信对等者的公钥（以证书形式）。</p>
 </blockquote>
 <p>由于业务需要，需要 <code>java</code> 实现 <code>https</code> 双向认证，需要使用 <code>keytool</code> 和 <code>openssl</code> 将 <code>pem</code> 证书转换成 <code>jks</code> 证书。</p>
@@ -375,7 +375,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-text">证书</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-text">证书介绍</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link"><span class="nav-text">SSL 简介</span></a></li><li class="nav-item nav-level-4"><a class="nav-link"><span class="nav-text">证书标准</span></a></li><li class="nav-item nav-level-4"><a class="nav-link"><span class="nav-text">证书文件扩展名</span></a></li><li class="nav-item nav-level-4"><a class="nav-link"><span class="nav-text">证书转换</span></a></li></ol></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%81%E4%B9%A6"><span class="nav-number">1.</span> <span class="nav-text">证书</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%81%E4%B9%A6%E4%BB%8B%E7%BB%8D"><span class="nav-number">1.1.</span> <span class="nav-text">证书介绍</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#SSL-%E7%AE%80%E4%BB%8B"><span class="nav-number">1.1.1.</span> <span class="nav-text">SSL 简介</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AF%81%E4%B9%A6%E6%A0%87%E5%87%86"><span class="nav-number">1.1.2.</span> <span class="nav-text">证书标准</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AF%81%E4%B9%A6%E6%96%87%E4%BB%B6%E6%89%A9%E5%B1%95%E5%90%8D"><span class="nav-number">1.1.3.</span> <span class="nav-text">证书文件扩展名</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AF%81%E4%B9%A6%E8%BD%AC%E6%8D%A2"><span class="nav-number">1.1.4.</span> <span class="nav-text">证书转换</span></a></li></ol></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
